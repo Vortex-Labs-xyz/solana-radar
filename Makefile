@@ -1,5 +1,13 @@
 .PHONY: help lint test compose-up compose-down clean
 
+# Detect if we're in a virtual environment or if one exists
+PYTHON := $(if $(VIRTUAL_ENV),python,$(if $(wildcard venv/bin/python),venv/bin/python,python3))
+PIP := $(if $(VIRTUAL_ENV),pip,$(if $(wildcard venv/bin/pip),venv/bin/pip,pip3))
+BLACK := $(if $(VIRTUAL_ENV),black,$(if $(wildcard venv/bin/black),venv/bin/black,black))
+FLAKE8 := $(if $(VIRTUAL_ENV),flake8,$(if $(wildcard venv/bin/flake8),venv/bin/flake8,flake8))
+MYPY := $(if $(VIRTUAL_ENV),mypy,$(if $(wildcard venv/bin/mypy),venv/bin/mypy,mypy))
+PYTEST := $(if $(VIRTUAL_ENV),pytest,$(if $(wildcard venv/bin/pytest),venv/bin/pytest,pytest))
+
 # Default target
 help:
 	@echo "Available targets:"
@@ -11,22 +19,22 @@ help:
 
 # Install dependencies
 install:
-	pip install -r requirements.txt
-	pip install -r requirements-dev.txt
+	$(PIP) install -r requirements.txt
+	$(PIP) install -r requirements-dev.txt
 
 # Lint code
 lint:
 	@echo "Running black formatter check..."
-	black --check ingest/ core/ alerts/ tests/
+	$(BLACK) --check ingest/ core/ alerts/ tests/
 	@echo "Running flake8..."
-	flake8 ingest/ core/ alerts/ tests/ --max-line-length=120 --exclude=__pycache__
+	$(FLAKE8) ingest/ core/ alerts/ tests/ --max-line-length=120 --exclude=__pycache__
 	@echo "Running mypy type checker..."
-	mypy ingest/ core/ alerts/
+	$(MYPY) ingest/ core/ alerts/
 
 # Run tests
 test:
 	@echo "Running pytest..."
-	pytest tests/ -v
+	$(PYTEST) tests/ -v
 
 # Start services
 compose-up:

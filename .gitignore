@@ -136,4 +136,4 @@ Thumbs.db
 # Docker volumes
 redis_data/
 prometheus_data/
-grafana_data/ 
+grafana_data/ venv/
