@@ -81,6 +81,11 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - REDIS_URL=redis://redis:6379
       - METRICS_PORT=8001
+      - SSL_KEY_LOCATION=${SSL_KEY_LOCATION:-}
+      - SSL_CA_LOCATION=${SSL_CA_LOCATION:-}
+      - SSL_CERT_LOCATION=${SSL_CERT_LOCATION:-}
+    volumes:
+      - ./certs:/etc/bitquery_certs:ro
     ports:
       - "8001:8001"
     depends_on:

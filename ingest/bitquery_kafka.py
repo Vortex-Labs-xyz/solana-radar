@@ -3,12 +3,23 @@ import asyncio
 import json
 import logging
 import os
-from typing import Optional
+import sys
+from typing import Optional, Dict, Any
 
-from aiokafka import AIOKafkaConsumer, AIOKafkaProducer  # type: ignore
-from prometheus_client import Counter, Gauge, start_http_server  # type: ignore
+# Add path for protobuf imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bitquery_proto"))
 
-from core.dedup import DedupManager
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer  # type: ignore # noqa: E402
+from prometheus_client import Counter, Gauge, start_http_server  # type: ignore # noqa: E402
+from google.protobuf.json_format import MessageToDict  # type: ignore # noqa: E402
+
+from core.dedup import DedupManager  # noqa: E402
+
+# Import protobuf message classes
+from bitquery.solana import (  # type: ignore # noqa: E402
+    dex_block_message_pb2,
+    token_block_message_pb2,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +29,16 @@ events_ingested_total = Counter(
     "events_ingested_total", "Total events ingested", ["topic"]
 )
 dedup_hits = Counter("dedup_hits", "Number of duplicate events detected")
+proto_decode_errors_total = Counter(
+    "proto_decode_errors_total", "Total protobuf decode errors", ["topic"]
+)
+
+# Topic to protobuf message class mapping
+TOPIC_MAP: Dict[str, type] = {
+    "solana.dextrades.proto": dex_block_message_pb2.DexParsedBlockMessage,
+    "solana.tokens.proto": token_block_message_pb2.TokenBlockMessage,
+    "solana.transactions.proto": dex_block_message_pb2.ParsedDexTransaction,
+}
 
 
 class BitqueryKafkaConsumer:
@@ -34,6 +55,9 @@ class BitqueryKafkaConsumer:
         kafka_sasl_mechanism: str = "SCRAM-SHA-512",
         output_topic: str = "bitquery.raw",
         redis_url: str = "redis://localhost:6379",
+        ssl_key_location: Optional[str] = None,
+        ssl_ca_location: Optional[str] = None,
+        ssl_cert_location: Optional[str] = None,
     ):
         """Initialize the Bitquery Kafka consumer.
 
@@ -47,6 +71,9 @@ class BitqueryKafkaConsumer:
             kafka_sasl_mechanism: SASL mechanism (default: SCRAM-SHA-512)
             output_topic: Topic to publish deduplicated messages
             redis_url: Redis connection URL
+            ssl_key_location: Path to SSL key file (for SASL_SSL)
+            ssl_ca_location: Path to SSL CA file (for SASL_SSL)
+            ssl_cert_location: Path to SSL certificate file (for SASL_SSL)
         """
         self.kafka_brokers = kafka_brokers
         self.kafka_topics = kafka_topics.split(",")
@@ -57,6 +84,9 @@ class BitqueryKafkaConsumer:
         self.kafka_sasl_mechanism = kafka_sasl_mechanism
         self.output_topic = output_topic
         self.redis_url = redis_url
+        self.ssl_key_location = ssl_key_location
+        self.ssl_ca_location = ssl_ca_location
+        self.ssl_cert_location = ssl_cert_location
 
         self.consumer: Optional[AIOKafkaConsumer] = None
         self.producer: Optional[AIOKafkaProducer] = None
@@ -65,18 +95,28 @@ class BitqueryKafkaConsumer:
 
     async def _init_kafka_consumer(self):
         """Initialize Kafka consumer with SCRAM authentication."""
-        self.consumer = AIOKafkaConsumer(
-            *self.kafka_topics,
-            bootstrap_servers=self.kafka_brokers,
-            group_id=self.kafka_group_id,
-            security_protocol=self.kafka_security_protocol,
-            sasl_mechanism=self.kafka_sasl_mechanism,
-            sasl_plain_username=self.kafka_sasl_username,
-            sasl_plain_password=self.kafka_sasl_password,
-            enable_auto_commit=True,
-            auto_offset_reset="latest",
-            value_deserializer=lambda v: v,  # Keep raw bytes
-        )
+        consumer_config = {
+            "bootstrap_servers": self.kafka_brokers,
+            "group_id": self.kafka_group_id,
+            "security_protocol": self.kafka_security_protocol,
+            "sasl_mechanism": self.kafka_sasl_mechanism,
+            "sasl_plain_username": self.kafka_sasl_username,
+            "sasl_plain_password": self.kafka_sasl_password,
+            "enable_auto_commit": True,
+            "auto_offset_reset": "latest",
+            "value_deserializer": lambda v: v,  # Keep raw bytes
+        }
+
+        # Add SSL configuration if using SASL_SSL
+        if self.kafka_security_protocol == "SASL_SSL":
+            if self.ssl_key_location:
+                consumer_config["ssl_keyfile"] = self.ssl_key_location
+            if self.ssl_ca_location:
+                consumer_config["ssl_cafile"] = self.ssl_ca_location
+            if self.ssl_cert_location:
+                consumer_config["ssl_certfile"] = self.ssl_cert_location
+
+        self.consumer = AIOKafkaConsumer(*self.kafka_topics, **consumer_config)
         await self.consumer.start()
         logger.info(
             f"Kafka consumer connected to {self.kafka_brokers}, "
@@ -142,6 +182,31 @@ class BitqueryKafkaConsumer:
         except Exception as e:
             logger.error(f"Error updating metrics: {e}")
 
+    def _decode_protobuf_message(
+        self, topic: str, raw_bytes: bytes
+    ) -> Optional[Dict[str, Any]]:
+        """Decode protobuf message based on topic.
+
+        Args:
+            topic: The topic name
+            raw_bytes: Raw protobuf bytes
+
+        Returns:
+            Decoded message as dict or None if decoding fails
+        """
+        if topic not in TOPIC_MAP:
+            return None
+
+        try:
+            message_class = TOPIC_MAP[topic]
+            msg_obj = message_class()
+            msg_obj.ParseFromString(raw_bytes)
+            return MessageToDict(msg_obj)
+        except Exception as e:
+            logger.error(f"Error decoding protobuf for topic {topic}: {e}")
+            proto_decode_errors_total.labels(topic=topic).inc()
+            return None
+
     async def _process_message(self, msg):
         """Process a single Kafka message.
 
@@ -153,15 +218,25 @@ class BitqueryKafkaConsumer:
             topic = msg.topic
             value = msg.value
 
-            # Decode if bytes
-            if isinstance(value, bytes):
-                value = value.decode("utf-8")
+            # Check if topic is a protobuf topic
+            if topic.endswith(".proto"):
+                # Decode protobuf
+                data = self._decode_protobuf_message(topic, value)
+                if data is None:
+                    logger.error(
+                        f"Failed to decode protobuf message from topic {topic}"
+                    )
+                    return
+            else:
+                # JSON path (unchanged)
+                if isinstance(value, bytes):
+                    value = value.decode("utf-8")
 
-            # Parse JSON if possible
-            try:
-                data = json.loads(value)
-            except json.JSONDecodeError:
-                data = {"raw": value}
+                # Parse JSON if possible
+                try:
+                    data = json.loads(value)
+                except json.JSONDecodeError:
+                    data = {"raw": value}
 
             # Generate event ID from message
             event_id = f"{topic}:{msg.partition}:{msg.offset}"
@@ -246,6 +321,11 @@ def main():
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
     metrics_port = int(os.getenv("METRICS_PORT", "8001"))
 
+    # SSL configuration for SASL_SSL
+    ssl_key_location = os.getenv("SSL_KEY_LOCATION")
+    ssl_ca_location = os.getenv("SSL_CA_LOCATION")
+    ssl_cert_location = os.getenv("SSL_CERT_LOCATION")
+
     # Validate required environment variables
     if not kafka_sasl_username or not kafka_sasl_password:
         logger.error("KAFKA_SASL_USERNAME and KAFKA_SASL_PASSWORD are required")
@@ -264,6 +344,9 @@ def main():
         kafka_security_protocol=kafka_security_protocol,
         kafka_sasl_mechanism=kafka_sasl_mechanism,
         redis_url=redis_url,
+        ssl_key_location=ssl_key_location,
+        ssl_ca_location=ssl_ca_location,
+        ssl_cert_location=ssl_cert_location,
     )
 
     asyncio.run(consumer.run())

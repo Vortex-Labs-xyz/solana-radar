@@ -29,6 +29,9 @@ RUN pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
 # Copy application code
 COPY . .
 
+# Compile proto files
+RUN python scripts/compile_proto.py
+
 # Default command for development
 CMD ["python", "-m", "ingest"]
 
@@ -40,6 +43,11 @@ COPY requirements.txt ./
 
 # Install production dependencies
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy proto files and compile them
+COPY proto ./proto
+COPY scripts/compile_proto.py ./scripts/
+RUN python scripts/compile_proto.py
 
 # Copy application code
 COPY ingest ./ingest

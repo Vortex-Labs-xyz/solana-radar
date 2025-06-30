@@ -12,4 +12,5 @@ isort==5.12.0
 
 # Type stubs
 types-redis==4.6.0.11
-types-aiofiles==23.2.0.0 
+types-aiofiles==23.2.0.0
+types-protobuf==4.24.0.4 
