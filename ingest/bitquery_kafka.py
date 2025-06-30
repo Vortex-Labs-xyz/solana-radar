@@ -11,12 +11,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bitquery_proto
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer  # type: ignore # noqa: E402
 from prometheus_client import Counter, Gauge, start_http_server  # type: ignore # noqa: E402
-from google.protobuf.json_format import MessageToDict  # noqa: E402
+from google.protobuf.json_format import MessageToDict  # type: ignore # noqa: E402
 
 from core.dedup import DedupManager  # noqa: E402
 
 # Import protobuf message classes
-from bitquery.solana import (  # noqa: E402
+from bitquery.solana import (  # type: ignore # noqa: E402
     dex_block_message_pb2,
     token_block_message_pb2,
 )
