@@ -1,0 +1,29 @@
+# Prometheus configuration
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'radar-monitor'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Application metrics
+  - job_name: 'radar-app'
+    static_configs:
+      - targets: ['app:8000']
+    metrics_path: /metrics
+
+  # Redis exporter (if using)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # Kafka exporter (if using)
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka-exporter:9308'] 
