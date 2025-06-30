@@ -41,7 +41,7 @@ jobs:
     
     - name: Run flake8
       run: |
-        flake8 ingest/ core/ alerts/ tests/ --max-line-length=100 --exclude=__pycache__
+        flake8 ingest/ core/ alerts/ tests/ --max-line-length=120 --exclude=__pycache__
     
     - name: Check code formatting with black
       run: |

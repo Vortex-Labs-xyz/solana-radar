@@ -13,17 +13,17 @@ scrape_configs:
       - targets: ['localhost:9090']
 
   # Application metrics
-  - job_name: 'radar-app'
+  - job_name: 'radar-core'
     static_configs:
-      - targets: ['app:8000']
-    metrics_path: /metrics
+      - targets: ['radar-core:8000']
+    metrics_path: '/metrics'
 
   # Redis exporter (if using)
   - job_name: 'redis'
     static_configs:
-      - targets: ['redis-exporter:9121']
+      - targets: ['redis:6379']
 
   # Kafka exporter (if using)
   - job_name: 'kafka'
     static_configs:
-      - targets: ['kafka-exporter:9308'] 
+      - targets: ['kafka:9092'] 
