@@ -35,14 +35,14 @@ def sample_proto_message():
     msg.Header.ParentSlot = 123456788
     msg.Header.Height = 987654321
     msg.Header.Timestamp = 1700000000
-    
+
     # Add a transaction
     tx = msg.Transactions.add()
     tx.Index = 0
     tx.Signature = b"test_signature_456"
     tx.Status.Success = True
     tx.Header.Fee = 5000
-    
+
     # Add a trade
     trade = tx.Trades.add()
     trade.InstructionIndex = 0
@@ -52,7 +52,7 @@ def sample_proto_message():
     trade.Buy.Amount = 1000000
     trade.Sell.Amount = 2000000
     trade.Fee = 1000
-    
+
     return msg
 
 
@@ -60,10 +60,10 @@ def test_decode_protobuf_message_success(consumer, sample_proto_message):
     """Test successful decoding of a protobuf message."""
     # Serialize the message
     raw_bytes = sample_proto_message.SerializeToString()
-    
+
     # Decode the message
     result = consumer._decode_protobuf_message("solana.dextrades.proto", raw_bytes)
-    
+
     # Check the result
     assert result is not None
     assert isinstance(result, dict)
@@ -95,7 +95,7 @@ async def test_process_message_proto(consumer, sample_proto_message):
     consumer.dedup_manager = AsyncMock()
     consumer.dedup_manager.is_new = AsyncMock(return_value=True)
     consumer.producer = AsyncMock()
-    
+
     # Create a mock Kafka message
     mock_msg = MagicMock()
     mock_msg.topic = "solana.dextrades.proto"
@@ -103,18 +103,18 @@ async def test_process_message_proto(consumer, sample_proto_message):
     mock_msg.offset = 100
     mock_msg.timestamp = 1700000000
     mock_msg.value = sample_proto_message.SerializeToString()
-    
+
     # Process the message
     await consumer._process_message(mock_msg)
-    
+
     # Verify the producer was called
     consumer.producer.send.assert_called_once()
-    
+
     # Check the sent message
     call_args = consumer.producer.send.call_args
     assert call_args[0][0] == "bitquery.raw"  # topic
     sent_msg = call_args[1]["value"]
-    
+
     assert sent_msg["topic"] == "solana.dextrades.proto"
     assert sent_msg["partition"] == 0
     assert sent_msg["offset"] == 100
@@ -130,7 +130,7 @@ async def test_process_message_json_fallback(consumer):
     consumer.dedup_manager = AsyncMock()
     consumer.dedup_manager.is_new = AsyncMock(return_value=True)
     consumer.producer = AsyncMock()
-    
+
     # Create a mock Kafka message with JSON data
     json_data = '{"test": "data", "value": 123}'
     mock_msg = MagicMock()
@@ -139,17 +139,17 @@ async def test_process_message_json_fallback(consumer):
     mock_msg.offset = 200
     mock_msg.timestamp = 1700000100
     mock_msg.value = json_data.encode("utf-8")
-    
+
     # Process the message
     await consumer._process_message(mock_msg)
-    
+
     # Verify the producer was called
     consumer.producer.send.assert_called_once()
-    
+
     # Check the sent message
     call_args = consumer.producer.send.call_args
     sent_msg = call_args[1]["value"]
-    
+
     assert sent_msg["topic"] == "solana.dextrades"
     assert sent_msg["data"]["test"] == "data"
     assert sent_msg["data"]["value"] == 123
@@ -168,7 +168,7 @@ def test_ssl_configuration():
         ssl_ca_location="/etc/certs/ca.pem",
         ssl_cert_location="/etc/certs/client.cert",
     )
-    
+
     assert consumer.kafka_security_protocol == "SASL_SSL"
     assert consumer.ssl_key_location == "/etc/certs/client.key"
     assert consumer.ssl_ca_location == "/etc/certs/ca.pem"
