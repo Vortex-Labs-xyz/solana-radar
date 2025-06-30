@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 # Add path for protobuf imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bitquery_proto'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bitquery_proto"))
 
 from bitquery.solana import dex_block_message_pb2  # noqa: E402
 from ingest.bitquery_kafka import BitqueryKafkaConsumer  # noqa: E402

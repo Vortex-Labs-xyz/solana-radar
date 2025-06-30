@@ -7,7 +7,7 @@ import sys
 from typing import Optional, Dict, Any
 
 # Add path for protobuf imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bitquery_proto'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bitquery_proto"))
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer  # type: ignore # noqa: E402
 from prometheus_client import Counter, Gauge, start_http_server  # type: ignore # noqa: E402
@@ -182,7 +182,9 @@ class BitqueryKafkaConsumer:
         except Exception as e:
             logger.error(f"Error updating metrics: {e}")
 
-    def _decode_protobuf_message(self, topic: str, raw_bytes: bytes) -> Optional[Dict[str, Any]]:
+    def _decode_protobuf_message(
+        self, topic: str, raw_bytes: bytes
+    ) -> Optional[Dict[str, Any]]:
         """Decode protobuf message based on topic.
 
         Args:
@@ -221,7 +223,9 @@ class BitqueryKafkaConsumer:
                 # Decode protobuf
                 data = self._decode_protobuf_message(topic, value)
                 if data is None:
-                    logger.error(f"Failed to decode protobuf message from topic {topic}")
+                    logger.error(
+                        f"Failed to decode protobuf message from topic {topic}"
+                    )
                     return
             else:
                 # JSON path (unchanged)
