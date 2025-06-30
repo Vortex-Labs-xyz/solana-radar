@@ -1,12 +1,12 @@
 .PHONY: help lint test compose-up compose-down clean
 
 # Detect if we're in a virtual environment or if one exists
-PYTHON := $(if $(VIRTUAL_ENV),python,$(if $(wildcard venv/bin/python),venv/bin/python,python3))
-PIP := $(if $(VIRTUAL_ENV),pip,$(if $(wildcard venv/bin/pip),venv/bin/pip,pip3))
-BLACK := $(if $(VIRTUAL_ENV),black,$(if $(wildcard venv/bin/black),venv/bin/black,black))
-FLAKE8 := $(if $(VIRTUAL_ENV),flake8,$(if $(wildcard venv/bin/flake8),venv/bin/flake8,flake8))
-MYPY := $(if $(VIRTUAL_ENV),mypy,$(if $(wildcard venv/bin/mypy),venv/bin/mypy,mypy))
-PYTEST := $(if $(VIRTUAL_ENV),pytest,$(if $(wildcard venv/bin/pytest),venv/bin/pytest,pytest))
+PYTHON := $(if $(VIRTUAL_ENV),python,$(if $(wildcard .venv/bin/python),.venv/bin/python,$(if $(wildcard venv/bin/python),venv/bin/python,python3)))
+PIP := $(if $(VIRTUAL_ENV),pip,$(if $(wildcard .venv/bin/pip),.venv/bin/pip,$(if $(wildcard venv/bin/pip),venv/bin/pip,pip3)))
+BLACK := $(if $(VIRTUAL_ENV),black,$(if $(wildcard .venv/bin/black),.venv/bin/black,$(if $(wildcard venv/bin/black),venv/bin/black,black)))
+FLAKE8 := $(if $(VIRTUAL_ENV),flake8,$(if $(wildcard .venv/bin/flake8),.venv/bin/flake8,$(if $(wildcard venv/bin/flake8),venv/bin/flake8,flake8)))
+MYPY := $(if $(VIRTUAL_ENV),mypy,$(if $(wildcard .venv/bin/mypy),.venv/bin/mypy,$(if $(wildcard venv/bin/mypy),venv/bin/mypy,mypy)))
+PYTEST := $(if $(VIRTUAL_ENV),pytest,$(if $(wildcard .venv/bin/pytest),.venv/bin/pytest,$(if $(wildcard venv/bin/pytest),venv/bin/pytest,pytest)))
 
 # Default target
 help:
@@ -53,4 +53,5 @@ clean:
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +
 	find . -type d -name ".mypy_cache" -exec rm -rf {} +
-	find . -type d -name "*.egg-info" -exec rm -rf {} + 
+	find . -type d -name "*.egg-info" -exec rm -rf {} +
+	rm -rf .venv venv

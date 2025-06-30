@@ -137,3 +137,4 @@ Thumbs.db
 redis_data/
 prometheus_data/
 grafana_data/ venv/
+.venv/
