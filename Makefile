@@ -1,14 +1,13 @@
-.PHONY: help lint test up down clean install
+.PHONY: help lint test compose-up compose-down clean
 
 # Default target
 help:
 	@echo "Available targets:"
-	@echo "  install  - Install Python dependencies"
-	@echo "  lint     - Run linting tools (flake8, black, mypy)"
-	@echo "  test     - Run tests with pytest"
-	@echo "  up       - Start all services with docker-compose"
-	@echo "  down     - Stop all services"
-	@echo "  clean    - Clean up generated files and caches"
+	@echo "  lint         - Run linting (black, flake8, mypy)"
+	@echo "  test         - Run tests with pytest"
+	@echo "  compose-up   - Start Docker Compose services"
+	@echo "  compose-down - Stop Docker Compose services"
+	@echo "  clean        - Clean up generated files"
 
 # Install dependencies
 install:
@@ -17,34 +16,33 @@ install:
 
 # Lint code
 lint:
-	@echo "Running flake8..."
-	flake8 ingest/ core/ alerts/ tests/ --max-line-length=100 --exclude=__pycache__
-	@echo "Running black..."
+	@echo "Running black formatter check..."
 	black --check ingest/ core/ alerts/ tests/
-	@echo "Running mypy..."
+	@echo "Running flake8..."
+	flake8 ingest/ core/ alerts/ tests/ --max-line-length=120 --exclude=__pycache__
+	@echo "Running mypy type checker..."
 	mypy ingest/ core/ alerts/
 
 # Run tests
 test:
 	@echo "Running pytest..."
-	pytest tests/ -v --cov=ingest --cov=core --cov=alerts --cov-report=term-missing
+	pytest tests/ -v
 
 # Start services
-up:
-	@echo "Starting services with docker-compose..."
-	docker-compose --profile kafka --profile redis --profile monitoring up -d
-	@echo "Services started. Kafka on :9092, Redis on :6379, Prometheus on :9090"
+compose-up:
+	@echo "Starting Docker Compose services (ingest profile)..."
+	docker compose --profile ingest up -d
 
 # Stop services
-down:
-	@echo "Stopping services..."
-	docker-compose --profile kafka --profile redis --profile monitoring down
+compose-down:
+	@echo "Stopping Docker Compose services..."
+	docker compose down
 
 # Clean up
 clean:
 	@echo "Cleaning up..."
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -delete 2>/dev/null || true
-	find . -type f -name ".coverage" -delete 2>/dev/null || true 
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+	find . -type d -name ".pytest_cache" -exec rm -rf {} +
+	find . -type d -name ".mypy_cache" -exec rm -rf {} +
+	find . -type d -name "*.egg-info" -exec rm -rf {} + 

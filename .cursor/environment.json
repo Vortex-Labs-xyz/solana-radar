@@ -1,0 +1,9 @@
+{
+  "install": [
+    "pip install -r requirements.txt",
+    "make lint",
+    "make test"
+  ],
+  "dockerComposeFile": "compose.yaml",
+  "dockerComposeProfile": "ingest"
+}
