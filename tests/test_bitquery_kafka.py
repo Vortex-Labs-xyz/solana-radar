@@ -318,6 +318,9 @@ def test_main_with_credentials(mock_run, mock_getenv):
         "KAFKA_SECURITY_PROTOCOL": "SASL_SSL",
         "KAFKA_SASL_MECHANISM": "PLAIN",
         "REDIS_URL": "redis://redis:6379",
+        "SSL_KEY_LOCATION": "/tmp/client.key",
+        "SSL_CA_LOCATION": "/tmp/ca.pem",
+        "SSL_CERT_LOCATION": "/tmp/client.cert",
     }.get(key, default)
 
     main()
@@ -328,3 +331,34 @@ def test_main_with_credentials(mock_run, mock_getenv):
     # Get the coroutine that was passed to asyncio.run
     coro = mock_run.call_args[0][0]
     assert coro.__name__ == "run"
+
+
+@patch("ingest.bitquery_kafka.AIOKafkaConsumer")
+@pytest.mark.asyncio
+async def test_init_kafka_consumer_with_ssl(mock_consumer_class):
+    """Test Kafka consumer initialization with SSL."""
+    mock_consumer = AsyncMock()
+    mock_consumer.start = AsyncMock()
+    mock_consumer_class.return_value = mock_consumer
+
+    # Create consumer with SSL configuration
+    consumer = BitqueryKafkaConsumer(
+        kafka_brokers="broker1:9093",
+        kafka_topics="topic1",
+        kafka_group_id="test-group",
+        kafka_sasl_username="user",
+        kafka_sasl_password="pass",
+        kafka_security_protocol="SASL_SSL",
+        ssl_key_location="/tmp/client.key",
+        ssl_ca_location="/tmp/ca.pem",
+        ssl_cert_location="/tmp/client.cert",
+    )
+
+    await consumer._init_kafka_consumer()
+
+    # Verify SSL parameters were passed
+    call_kwargs = mock_consumer_class.call_args[1]
+    assert call_kwargs["security_protocol"] == "SASL_SSL"
+    assert call_kwargs["ssl_keyfile"] == "/tmp/client.key"
+    assert call_kwargs["ssl_cafile"] == "/tmp/ca.pem"
+    assert call_kwargs["ssl_certfile"] == "/tmp/client.cert"
