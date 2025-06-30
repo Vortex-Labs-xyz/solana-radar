@@ -3,23 +3,22 @@ import asyncio
 import json
 import logging
 import os
+import sys
 from typing import Optional, Dict, Any
+
+# Add path for protobuf imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bitquery_proto'))
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer  # type: ignore
 from prometheus_client import Counter, Gauge, start_http_server  # type: ignore
-from google.protobuf.message import Message
 from google.protobuf.json_format import MessageToDict
 
 from core.dedup import DedupManager
 
 # Import protobuf message classes
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bitquery_proto'))
 from bitquery.solana import (
     dex_block_message_pb2,
     token_block_message_pb2,
-    block_message_pb2,
 )
 
 logger = logging.getLogger(__name__)

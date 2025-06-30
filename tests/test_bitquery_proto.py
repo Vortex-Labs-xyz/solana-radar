@@ -1,13 +1,14 @@
 """Tests for protobuf message processing in Bitquery Kafka consumer."""
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bitquery_proto'))
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
-from bitquery.solana import dex_block_message_pb2
+from unittest.mock import AsyncMock, MagicMock
 
+# Add path for protobuf imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bitquery_proto'))
+
+from bitquery.solana import dex_block_message_pb2
 from ingest.bitquery_kafka import BitqueryKafkaConsumer
 
 
@@ -27,7 +28,7 @@ def consumer():
 def sample_proto_message():
     """Create a sample protobuf message for testing."""
     msg = dex_block_message_pb2.DexParsedBlockMessage()
-    
+
     # Set block header
     msg.Header.Slot = 123456789
     msg.Header.Hash = b"test_hash_123"
