@@ -1,0 +1,11 @@
+# Datei öffnen oder neu anlegen
+nano .cursorignore        # oder VS Code, vim, etc.
+
+# ↓ Folgendes einfügen – Reihenfolge beibehalten
+# ------------------------------------------------
+# Override: allow env files for indexing
+!.env
+!.env.*
+# ------------------------------------------------
+
+# speichern + schließen# 
