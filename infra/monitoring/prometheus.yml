@@ -18,6 +18,12 @@ scrape_configs:
       - targets: ['radar-core:8000']
     metrics_path: '/metrics'
 
+  # Bitquery Kafka consumer metrics
+  - job_name: 'bitquery-consumer'
+    static_configs:
+      - targets: ['bitquery-consumer:8001']
+    metrics_path: '/metrics'
+
   # Redis exporter (if using)
   - job_name: 'redis'
     static_configs:
