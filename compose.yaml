@@ -62,6 +62,41 @@ services:
       - radar-network
     restart: unless-stopped
 
+  # Bitquery Kafka consumer
+  bitquery-consumer:
+    build:
+      context: .
+      target: production
+    profiles:
+      - ingest
+    command: python -m ingest.bitquery_kafka
+    environment:
+      - KAFKA_BROKERS=${KAFKA_BROKERS}
+      - KAFKA_SASL_USERNAME=${KAFKA_SASL_USERNAME}
+      - KAFKA_SASL_PASSWORD=${KAFKA_SASL_PASSWORD}
+      - KAFKA_SECURITY_PROTOCOL=${KAFKA_SECURITY_PROTOCOL}
+      - KAFKA_SASL_MECHANISM=${KAFKA_SASL_MECHANISM}
+      - KAFKA_TOPICS=${KAFKA_TOPICS}
+      - KAFKA_GROUP_ID=${KAFKA_GROUP_ID}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - REDIS_URL=redis://redis:6379
+      - METRICS_PORT=8001
+    ports:
+      - "8001:8001"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - radar-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # Prometheus for metrics
   prometheus:
     image: prom/prometheus:v2.48.1
